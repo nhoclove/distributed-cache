@@ -1,0 +1,25 @@
+---
+version: "3.5"
+services:
+  cache-01:
+    image: discache:v0.0.1
+    ports:
+      - 8801:8088
+    networks:
+      - discache-net
+  cache-02:
+    image: discache:v0.0.1
+    ports:
+      - 8802:8088
+    networks:
+      - discache-net
+  cache-03:
+    image: discache:v0.0.1
+    ports:
+      - 8803:8088
+    networks:
+      - discache-net
+networks:
+  discache-net:
+    name: discache-net
+    driver: bridge
