@@ -6,6 +6,7 @@ import (
 	"net"
 	"strings"
 
+	"discache/pkg/hash"
 	"discache/pkg/parser"
 	"discache/pkg/server"
 )
@@ -75,7 +76,7 @@ func (cli *Cli) Disconnect() error {
 }
 
 func (cli *Cli) getConnection(key string) (*net.Conn, error) {
-	h := hashKeyCRC32(key)
+	h, _ := hash.Hash(key)
 	idx := int(h) % len(cli.servers)
 	server := cli.servers[idx]
 	if conn, ok := cli.conns[server]; ok && conn != nil {

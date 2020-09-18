@@ -1,10 +1,10 @@
 package server
 
 import (
-	"bufio"
-	"fmt"
+	"context"
 	"net"
-	"strings"
+
+	"discache/pkg/parser"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -14,10 +14,14 @@ var (
 )
 
 type (
+	// Parser receives a string and attempt to parse it to a valid Command
+	// Error is returned if the given string is not a valid
 	Parser interface {
-		Parse(command string) (*Command, error)
+		Parse(command string) (*parser.Command, error)
 	}
 
+	// Engine is short for StorageEngine provides functionalities to the underlying data structure
+	// in this case Map data structure is used
 	Engine interface {
 		Set(key string, val []byte) error
 		Get(key string) ([]byte, error)
@@ -25,20 +29,23 @@ type (
 	}
 )
 
+// TCP uses TCP socket for client-server connection
 type TCP struct {
 	addr   string
 	parser Parser
 	engine Engine
 }
 
+// NewTCP initializes a new TCP server instance
 func NewTCP(addr string, parser Parser, engine Engine) *TCP {
 	return &TCP{
-		addr:   addr,
 		parser: parser,
 		engine: engine,
+		addr:   addr,
 	}
 }
 
+// Serve starts a TCP server then waits for client connections
 func (t *TCP) Serve() error {
 	l, err := net.Listen("tcp", t.addr)
 	if err != nil {
@@ -53,68 +60,15 @@ func (t *TCP) Serve() error {
 			continue
 		}
 		log.Infof("Accepted a connection from: %s", c.RemoteAddr().String())
-		go t.handle(c)
+		conn := t.newConn(c, t.parser, t.engine)
+		go conn.serve(context.TODO())
 	}
 }
 
-func (t *TCP) handle(conn net.Conn) {
-	defer conn.Close()
-
-	for {
-		netData, err := bufio.NewReader(conn).ReadString('\n')
-		if err != nil {
-			log.Errorf("Failed to read net data from connection, %v", err)
-			return
-		}
-		// Terminate signal from client
-		if string(netData) == exit {
-			log.Infof("Received terminated signal from client: %s", conn.RemoteAddr().String())
-			return
-		}
-
-		command, err := t.parser.Parse(strings.TrimSuffix(string(netData), "\r\n"))
-		if err != nil {
-			conn.Write([]byte(fmt.Sprintf("%s\n", err)))
-			continue
-		}
-
-		switch command.Op {
-		case "GET":
-			val, err := t.engine.Get(command.Args[0])
-			if err != nil {
-				conn.Write([]byte(fmt.Sprintf("%s\n", err.Error())))
-				break
-			}
-			_, err = conn.Write(append(val, byte('\n')))
-			if err != nil {
-				log.Errorf("Failed to write in GET, %v", err)
-			}
-		case "SET":
-			err := t.engine.Set(command.Args[0], []byte(command.Args[1]))
-			if err != nil {
-				conn.Write([]byte(err.Error()))
-				break
-			}
-			_, err = conn.Write([]byte("ok\n"))
-			if err != nil {
-				log.Errorf("Failed to write in SET, %v", err)
-			}
-		case "DEL":
-			err := t.engine.Del(command.Args[0])
-			if err != nil {
-				conn.Write([]byte(err.Error()))
-				break
-			}
-			_, err = conn.Write([]byte("ok\n"))
-			if err != nil {
-				log.Errorf("Failed to write in DEL, %v", err)
-			}
-		default:
-			conn.Write([]byte(fmt.Sprintf("Invalid operation: %s\n", command.Op)))
-		}
+func (t *TCP) newConn(c net.Conn, parser Parser, engine Engine) *conn {
+	return &conn{
+		Parser: parser,
+		Engine: engine,
+		Conn:   c,
 	}
-}
-
-func (t *TCP) get(args []string) (interface{}, error) {
-	return t.engine.Get(args[0])
 }

@@ -9,25 +9,25 @@ var (
 	ErrNotExist = errors.New("key does not exist")
 )
 
-type Default struct {
+type String struct {
 	store map[string][]byte
 	sync.RWMutex
 }
 
-func New() *Default {
-	return &Default{
+func New() *String {
+	return &String{
 		store: make(map[string][]byte, 1024),
 	}
 }
 
-func (d *Default) Set(key string, val []byte) error {
+func (d *String) Set(key string, val []byte) error {
 	d.Lock()
 	defer d.Unlock()
 	d.store[key] = val
 	return nil
 }
 
-func (d *Default) Get(key string) ([]byte, error) {
+func (d *String) Get(key string) ([]byte, error) {
 	d.RLock()
 	defer d.RUnlock()
 	val, ok := d.store[key]
@@ -37,7 +37,7 @@ func (d *Default) Get(key string) ([]byte, error) {
 	return val, nil
 }
 
-func (d *Default) Del(key string) error {
+func (d *String) Del(key string) error {
 	d.Lock()
 	defer d.Unlock()
 	delete(d.store, key)

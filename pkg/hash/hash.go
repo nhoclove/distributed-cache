@@ -1,4 +1,4 @@
-package client
+package hash
 
 import "hash/crc32"
 
