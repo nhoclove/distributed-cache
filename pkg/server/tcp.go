@@ -20,29 +20,38 @@ type (
 		Parse(command string) (*parser.Command, error)
 	}
 
-	// Engine is short for StorageEngine provides functionalities to the underlying data structure
-	// in this case Map data structure is used
-	Engine interface {
-		Set(key string, val []byte) error
-		Get(key string) ([]byte, error)
-		Del(key string) error
+	// CMDHandler executes the logic of a command
+	// Inspired by HTTP server handler from golang official library
+	CMDHandler interface {
+		ServeCMD(net.Conn, ...string)
 	}
 )
 
+// HandlerFunc is an adapter
+type HandlerFunc func(net.Conn, ...string)
+
+// ServeCMD calls f(conn, args...)
+func (f HandlerFunc) ServeCMD(conn net.Conn, args ...string) {
+	f(conn, args...)
+}
+
 // TCP uses TCP socket for client-server connection
 type TCP struct {
-	addr   string
-	parser Parser
-	engine Engine
+	addr        string
+	cmdHandlers map[parser.Op]CMDHandler
 }
 
 // NewTCP initializes a new TCP server instance
-func NewTCP(addr string, parser Parser, engine Engine) *TCP {
+func NewTCP(addr string, parser Parser) *TCP {
 	return &TCP{
-		parser: parser,
-		engine: engine,
-		addr:   addr,
+		addr:        addr,
+		cmdHandlers: make(map[parser.Op]CMDHandler, 0),
 	}
+}
+
+// RegisterCMD registers a command
+func (t *TCP) RegisterCMD(op parser.Op, handler CMDHandler) {
+	t.cmdHandlers[op] = handler
 }
 
 // Serve starts a TCP server then waits for client connections
@@ -60,15 +69,14 @@ func (t *TCP) Serve() error {
 			continue
 		}
 		log.Infof("Accepted a connection from: %s", c.RemoteAddr().String())
-		conn := t.newConn(c, t.parser, t.engine)
+		conn := t.newConn(c)
 		go conn.serve(context.TODO())
 	}
 }
 
-func (t *TCP) newConn(c net.Conn, parser Parser, engine Engine) *conn {
+func (t *TCP) newConn(c net.Conn) *conn {
 	return &conn{
-		Parser: parser,
-		Engine: engine,
-		Conn:   c,
+		server: t,
+		conn:   c,
 	}
 }
