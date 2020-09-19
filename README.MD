@@ -1,5 +1,7 @@
 # DISTRIBUTED CACHE
 
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/nhoclove/distributed-cache/blob/master/LICENSE.md)
+
 ## Description
 A simple caching system inspired by MemeCached
 
