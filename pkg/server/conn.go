@@ -13,7 +13,6 @@ import (
 )
 
 type conn struct {
-	Parser Parser
 	server *TCP
 	conn   net.Conn
 }
@@ -33,7 +32,7 @@ func (c *conn) serve(ctx context.Context) {
 			return
 		}
 
-		cmd, err := c.Parser.Parse(strings.TrimSuffix(string(netData), "\r\n"))
+		cmd, err := c.server.Parser.Parse(strings.TrimSuffix(string(netData), "\r\n"))
 		if err != nil {
 			c.conn.Write([]byte(fmt.Sprintf("%s\n", err)))
 			continue
@@ -44,9 +43,10 @@ func (c *conn) serve(ctx context.Context) {
 }
 
 func (c *conn) ServeCMD(cmd parser.Command) {
-	h, ok := c.server.cmdHandlers[cmd.Op]
-	if !ok {
-		c.conn.Write([]byte(fmt.Sprintf("Invalid command: %s\n", cmd.Op.String())))
+	handler := c.server.CMDHandler
+	if handler == nil {
+		// Use default handler
+		handler = defaultServeCMDHandler
 	}
-	h.ServeCMD(c.conn, cmd.Args...)
+	handler.ServeCMD(c.conn, cmd)
 }

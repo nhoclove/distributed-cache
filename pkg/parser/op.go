@@ -16,15 +16,15 @@ const (
 
 var (
 	opNames = [...]string{
-		"Get",
-		"Set",
-		"Del",
+		"get",
+		"set",
+		"del",
 	}
 
 	opValues = map[string]Op{
-		"Get": CmdGet,
-		"Set": CmdSet,
-		"Del": CmdDel,
+		"get": CmdGet,
+		"set": CmdSet,
+		"del": CmdDel,
 	}
 )
 

@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"net"
+	"os"
 	"strings"
 
 	"discache/pkg/hash"
@@ -36,10 +37,10 @@ func New(servers []string) *Cli {
 func (cli *Cli) Connect() {
 	defer cli.Disconnect()
 	for {
-		// reader := bufio.NewReader(os.Stdin)
-		// fmt.Printf(">> ")
-		// text, _ := reader.ReadString('\n')
-		text := "SET NGUYEN BAC"
+		reader := bufio.NewReader(os.Stdin)
+		fmt.Printf(">> ")
+		text, _ := reader.ReadString('\n')
+		// text := "SET NGUYEN BAC"
 		if text == "exit" {
 			return
 		}

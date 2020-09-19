@@ -1,12 +1,13 @@
 package main
 
 import (
+	"flag"
+	"strconv"
+
 	"discache/pkg/cmd"
 	"discache/pkg/engine"
 	"discache/pkg/parser"
 	"discache/pkg/server"
-	"flag"
-	"strconv"
 )
 
 func main() {
@@ -17,10 +18,17 @@ func main() {
 	parser := parser.New()
 	engine := engine.New()
 	cmdHandler := cmd.New(engine)
-	server := server.NewTCP(":"+strconv.Itoa(port), parser)
-	// Register command handlers
+
+	// Register command handler
 	for _, h := range cmdHandler.CMDHandlers() {
-		server.RegisterCMD(h.Op, h.Handler)
+		server.HandleFunc(h.Op, h.Handler)
+	}
+
+	// Start TCP server
+	server := server.TCP{
+		Addr:       ":" + strconv.Itoa(port),
+		Parser:     parser,
+		CMDHandler: nil,
 	}
 	server.Serve()
 }
